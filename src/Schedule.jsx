@@ -92,17 +92,16 @@ const enrichScheduleRow = (r) => {
 
   const d1Key = `${r.id}_day1`
   const d4Key = `${r.id}_day4`
-  const legacyDeclined = r.status === 'declined' || localOverrides[r.id] === 'declined'
+  const legacyDeclined = localOverrides[r.id] === 'declined'
 
-  const status_day1 = r.status_day1
-    ?? localOverrides[d1Key]
-    ?? (typeof localOverrides[r.id] === 'object' ? localOverrides[r.id]?.day1 : undefined)
-    ?? (legacyDeclined ? 'declined' : 'approved')
+  // Database column value takes top priority; fallback to local overrides only if DB value is null/undefined
+  const status_day1 = (r.status_day1 !== null && r.status_day1 !== undefined)
+    ? r.status_day1
+    : (localOverrides[d1Key] ?? (legacyDeclined ? 'declined' : 'approved'))
 
-  const status_day4 = r.status_day4
-    ?? localOverrides[d4Key]
-    ?? (typeof localOverrides[r.id] === 'object' ? localOverrides[r.id]?.day4 : undefined)
-    ?? (legacyDeclined ? 'declined' : 'approved')
+  const status_day4 = (r.status_day4 !== null && r.status_day4 !== undefined)
+    ? r.status_day4
+    : (localOverrides[d4Key] ?? (legacyDeclined ? 'declined' : 'approved'))
 
   const hasD1 = (r.selected_days || []).includes('day1') && status_day1 !== 'declined'
   const hasD4 = (r.selected_days || []).includes('day4') && status_day4 !== 'declined'
@@ -137,23 +136,11 @@ export default function PublicSchedule() {
     setLoading(true)
     const { data, error } = await supabase
       .from('kvk_appointments')
-      .select('id, player_name, alliance, tc_level, selected_days, time_slot_day1, time_slot_day4, created_at, status, status_day1, status_day4')
+      .select('id, player_name, alliance, tc_level, selected_days, time_slot_day1, time_slot_day4, created_at, status_day1, status_day4')
       .order('player_name', { ascending: true })
 
     if (error) {
-      // Fallback query if status column is pending in DB schema cache
-      const fallbackRes = await supabase
-        .from('kvk_appointments')
-        .select('id, player_name, alliance, tc_level, selected_days, time_slot_day1, time_slot_day4, created_at')
-        .order('player_name', { ascending: true })
-
-      if (fallbackRes.error) {
-        console.error('[Public Schedule Fetch Error]', fallbackRes.error)
-      } else {
-        const enriched = (fallbackRes.data ?? []).map(enrichScheduleRow).filter(r => !r.isFullyDeclined)
-        setRows(enriched)
-        setLastUpdated(new Date())
-      }
+      console.error('[Public Schedule Fetch Error]', error)
     } else {
       const enriched = (data ?? []).map(enrichScheduleRow).filter(r => !r.isFullyDeclined)
       setRows(enriched)

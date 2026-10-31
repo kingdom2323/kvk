@@ -77,21 +77,23 @@ const enrichRoi = (r) => {
   const d4Key = `${r.id}_day4`
   const legacyDeclined = r.status === 'declined' || localOverrides[r.id] === 'declined'
 
-  const status_day1 = r.status_day1
-    ?? localOverrides[d1Key]
-    ?? (typeof localOverrides[r.id] === 'object' ? localOverrides[r.id]?.day1 : undefined)
-    ?? (legacyDeclined ? 'declined' : 'approved')
+  // Database column value takes top priority; fallback to local overrides only if DB value is null/undefined
+  const status_day1 = (r.status_day1 !== null && r.status_day1 !== undefined)
+    ? r.status_day1
+    : (localOverrides[d1Key] ?? (legacyDeclined ? 'declined' : 'approved'))
 
-  const status_day4 = r.status_day4
-    ?? localOverrides[d4Key]
-    ?? (typeof localOverrides[r.id] === 'object' ? localOverrides[r.id]?.day4 : undefined)
-    ?? (legacyDeclined ? 'declined' : 'approved')
+  const status_day4 = (r.status_day4 !== null && r.status_day4 !== undefined)
+    ? r.status_day4
+    : (localOverrides[d4Key] ?? (legacyDeclined ? 'declined' : 'approved'))
 
   const hasD1 = (r.selected_days || []).includes('day1')
   const hasD4 = (r.selected_days || []).includes('day4')
 
   const isD1Active = hasD1 && status_day1 !== 'declined'
   const isD4Active = hasD4 && status_day4 !== 'declined'
+
+  const isD1Declined = hasD1 && status_day1 === 'declined'
+  const isD4Declined = hasD4 && status_day4 === 'declined'
 
   const isFullyDeclined = (hasD1 || hasD4) && (!isD1Active && !isD4Active)
   const isPartiallyDeclined = (hasD1 && hasD4) && ((status_day1 === 'declined') !== (status_day4 === 'declined'))
@@ -106,6 +108,8 @@ const enrichRoi = (r) => {
     hasD4,
     isD1Active,
     isD4Active,
+    isD1Declined,
+    isD4Declined,
     isFullyDeclined,
     isPartiallyDeclined,
     _roi: calculateRoiScore({
@@ -133,19 +137,22 @@ const buildPayload = (f) => ({
   true_gold_count:    parseInt(f.trueGold,          10) || 0,
   time_slot_day1:     f.timeSlotDay1 ? String(f.timeSlotDay1) : null,
   time_slot_day4:     f.timeSlotDay4 ? String(f.timeSlotDay4) : null,
-  ...(f.status ? { status: f.status } : {}),
-  ...(f.status_day1 ? { status_day1: f.status_day1 } : {}),
-  ...(f.status_day4 ? { status_day4: f.status_day4 } : {}),
+  status_day1:        f.status_day1 ?? 'approved',
+  status_day4:        f.status_day4 ?? 'approved',
 })
 
-// ─── Conflict detection (declined slots are excluded per day) ─────────────────
+// ─── Conflict detection (declined slots are completely excluded per day) ──────
 const buildConflictMap = (rows = []) => {
   const d1 = {}, d4 = {}
   ;(rows || []).forEach(r => {
-    if (r?.status_day1 !== 'declined' && r?.selected_days?.includes('day1') && r?.time_slot_day1) {
+    // Only active (non-declined) bookings count towards conflict/overlap detection
+    const d1Active = r?.status_day1 !== 'declined' && r?.selected_days?.includes('day1') && Boolean(r?.time_slot_day1)
+    const d4Active = r?.status_day4 !== 'declined' && r?.selected_days?.includes('day4') && Boolean(r?.time_slot_day4)
+
+    if (d1Active) {
       (d1[r.time_slot_day1] ??= []).push(r.id)
     }
-    if (r?.status_day4 !== 'declined' && r?.selected_days?.includes('day4') && r?.time_slot_day4) {
+    if (d4Active) {
       (d4[r.time_slot_day4] ??= []).push(r.id)
     }
   })
@@ -233,13 +240,15 @@ function RoiPill({ score }) {
   )
 }
 
-function ConflictPill({ conflicts }) {
-  if (!conflicts||conflicts.size===0) return <span style={{ color:'#374151' }}>—</span>
+function ConflictPill({ conflicts, isD1Declined, isD4Declined }) {
+  if (!conflicts || conflicts.size === 0) return <span style={{ color:'#374151' }}>—</span>
+  const activeConflicts = [...conflicts].filter(d => (d === 'day1' ? !isD1Declined : !isD4Declined))
+  if (activeConflicts.length === 0) return <span style={{ color:'#374151' }}>—</span>
   return (
     <span className="inline-flex items-center gap-1 font-sans font-bold text-xs px-2 py-0.5 rounded-lg"
       style={{ color:'#fcd34d', background:'rgba(245,158,11,0.18)', border:'1px solid rgba(245,158,11,0.4)' }}>
       <AlertTriangle className="w-3 h-3" />
-      {[...conflicts].map(d=>d==='day1'?'D1':'D4').join('+')}
+      {activeConflicts.map(d=>d==='day1'?'D1':'D4').join('+')}
     </span>
   )
 }
@@ -1454,7 +1463,27 @@ export default function Admin() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { if (isAuthed) fetchData() }, [isAuthed, fetchData])
+  useEffect(() => {
+    if (!isAuthed) return
+
+    fetchData()
+
+    // Real-time Supabase postgres_changes subscription
+    const channel = supabase
+      .channel('admin_appointments_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kvk_appointments' },
+        () => {
+          fetchData()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isAuthed, fetchData])
 
   // ── Direct Quick Re-Assignment Handler ────────────────────────────────────────
   const handleReassignSlot = async (player, targetDay, targetSlot) => {
@@ -1611,7 +1640,10 @@ export default function Admin() {
   // Counts strictly exclude declined appointments from active schedule coverage
   const activeRows          = useMemo(() => rows.filter(r => !r.isFullyDeclined), [rows])
   const declinedCount       = useMemo(() => rows.filter(r => r.isFullyDeclined).length, [rows])
-  const totalConflicts      = activeRows.filter(r => conflictMap.has(r.id)).length
+  const totalConflicts      = useMemo(() => rows.filter(r =>
+    (!r.isD1Declined && conflictMap.get(r.id)?.has('day1')) ||
+    (!r.isD4Declined && conflictMap.get(r.id)?.has('day4'))
+  ).length, [rows, conflictMap])
   const day1Count           = rows.filter(r => r.status_day1 !== 'declined' && r.selected_days?.includes('day1')).length
   const day4Count           = rows.filter(r => r.status_day4 !== 'declined' && r.selected_days?.includes('day4')).length
   const bothCount           = rows.filter(r => r.status_day1 !== 'declined' && r.status_day4 !== 'declined' && r.selected_days?.includes('day1') && r.selected_days?.includes('day4')).length
@@ -1653,7 +1685,7 @@ export default function Admin() {
       })
     }))
 
-    // 2. Persist to localStorage cache so it survives reloads even if DB column is pending
+    // 2. Persist to localStorage cache
     try {
       const overrides = JSON.parse(localStorage.getItem('kvk_status_overrides') || '{}')
       overrides[`${row.id}_${targetDay}`] = newStatus
@@ -1662,27 +1694,21 @@ export default function Admin() {
       console.warn('[Status localStorage]', e)
     }
 
-    // 3. Persist to Supabase
+    // 3. Persist to Supabase database (strictly updating valid column status_day1 / status_day4)
     const dbField = targetDay === 'day1' ? 'status_day1' : 'status_day4'
-    const overall = (updatedD1 === 'declined' && updatedD4 === 'declined') ? 'declined' : 'approved'
 
     const { error: err } = await supabase
       .from('kvk_appointments')
       .update({
         [dbField]: newStatus,
-        status: overall,
       })
       .eq('id', row.id)
 
     if (err) {
-      console.warn('[Supabase status update warning]:', err.message)
-      if (err.message?.includes('column') || err.code === 'PGRST204') {
-        await supabase
-          .from('kvk_appointments')
-          .update({ status: overall })
-          .eq('id', row.id)
-          .catch(() => {})
-      }
+      console.error('[Supabase status update error]:', err)
+      showToast('error', `Failed to update database: ${err.message}`)
+      fetchData()
+      return
     }
 
     const dayLabel = targetDay === 'day1' ? 'Day 1' : 'Day 4'
@@ -1713,31 +1739,25 @@ export default function Admin() {
       const overrides = JSON.parse(localStorage.getItem('kvk_status_overrides') || '{}')
       overrides[`${row.id}_day1`] = newStatus
       overrides[`${row.id}_day4`] = newStatus
-      overrides[row.id] = newStatus
       localStorage.setItem('kvk_status_overrides', JSON.stringify(overrides))
     } catch (e) {
       console.warn('[Status localStorage]', e)
     }
 
-    // 3. Persist to Supabase
+    // 3. Persist to Supabase database (strictly updating valid columns status_day1 / status_day4)
     const { error: err } = await supabase
       .from('kvk_appointments')
       .update({
         status_day1: newStatus,
         status_day4: newStatus,
-        status: newStatus,
       })
       .eq('id', row.id)
 
     if (err) {
-      console.warn('[Supabase status update warning]:', err.message)
-      if (err.message?.includes('column') || err.code === 'PGRST204') {
-        await supabase
-          .from('kvk_appointments')
-          .update({ status: newStatus })
-          .eq('id', row.id)
-          .catch(() => {})
-      }
+      console.error('[Supabase status update error]:', err)
+      showToast('error', `Failed to update database: ${err.message}`)
+      fetchData()
+      return
     }
 
     showToast(
@@ -2103,8 +2123,10 @@ export default function Admin() {
                       const isFullyDeclined = r.isFullyDeclined
                       const isPartiallyDeclined = r.isPartiallyDeclined
 
-                      const conflicts   = conflictMap.get(r.id)
-                      const hasConflict = !isFullyDeclined && conflicts && conflicts.size > 0
+                      const conflicts     = conflictMap.get(r.id)
+                      const hasD1Conflict = !isD1Declined && Boolean(conflicts?.has('day1'))
+                      const hasD4Conflict = !isD4Declined && Boolean(conflicts?.has('day4'))
+                      const hasConflict   = hasD1Conflict || hasD4Conflict
                       const days = (r.selected_days||[]).map(d=>d==='day1'?'⚒️':'⚔️').join(' ')
                       return (
                         <tr key={r.id}
@@ -2151,8 +2173,8 @@ export default function Admin() {
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-1.5">
                                   <span style={{
-                                    color: isD1Declined ? '#64748b' : conflicts?.has('day1') ? '#fcd34d' : '#cbd5e1',
-                                    fontWeight: conflicts?.has('day1') ? 700 : 500,
+                                    color: isD1Declined ? '#64748b' : hasD1Conflict ? '#fcd34d' : '#cbd5e1',
+                                    fontWeight: hasD1Conflict ? 700 : 500,
                                     textDecoration: isD1Declined ? 'line-through' : 'none'
                                   }}>
                                     {fmtSlot(r.time_slot_day1)}
@@ -2202,8 +2224,8 @@ export default function Admin() {
                               <div className="flex flex-col gap-1">
                                 <div className="flex items-center gap-1.5">
                                   <span style={{
-                                    color: isD4Declined ? '#64748b' : conflicts?.has('day4') ? '#fcd34d' : '#cbd5e1',
-                                    fontWeight: conflicts?.has('day4') ? 700 : 500,
+                                    color: isD4Declined ? '#64748b' : hasD4Conflict ? '#fcd34d' : '#cbd5e1',
+                                    fontWeight: hasD4Conflict ? 700 : 500,
                                     textDecoration: isD4Declined ? 'line-through' : 'none'
                                   }}>
                                     {fmtSlot(r.time_slot_day4)}
@@ -2252,7 +2274,7 @@ export default function Admin() {
                           <td style={{ padding:'10px 14px', textAlign:'right', color:'#fcd34d', fontWeight:600, whiteSpace:'nowrap' }}>{fmtGold(r.true_gold_count)}</td>
                           <td style={{ padding:'10px 14px', textAlign:'right', whiteSpace:'nowrap' }}><RoiPill score={r._roi} /></td>
                           <td style={{ padding:'10px 14px', whiteSpace:'nowrap' }}>
-                            {isFullyDeclined ? <span className="text-slate-600 text-xs">—</span> : <ConflictPill conflicts={conflicts} />}
+                            {isFullyDeclined ? <span className="text-slate-600 text-xs">—</span> : <ConflictPill conflicts={conflicts} isD1Declined={isD1Declined} isD4Declined={isD4Declined} />}
                           </td>
                           <td style={{ padding:'10px 14px', color:'#4b5563', whiteSpace:'nowrap', fontSize:12 }}>{fmtDate(r.created_at)}</td>
                           <td style={{ padding:'8px 12px', whiteSpace:'nowrap' }}>
