@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Clock, Crown, Search, ArrowLeft, RefreshCw,
-  Eye, EyeOff, Sparkles, Share2, Check, X, Filter, Lock,
+  Clock, Crown, Search, RefreshCw,
+  Share2, Check, X, Filter, Lock,
 } from 'lucide-react'
 import { supabase } from './lib/supabase.js'
 
@@ -67,7 +67,7 @@ function TcBadge({ level }) {
 
 function StatCard({ icon, label, value, sub, accent }) {
   return (
-    <div className="flex flex-col justify-between gap-1 p-3 sm:px-4 sm:py-3 rounded-xl min-w-0 w-full"
+    <div className="flex flex-col justify-between gap-1 p-3 sm:px-4 sm:py-3.5 rounded-2xl min-w-0 w-full shadow-lg"
       style={{ background:'#0f1117', border:`1px solid ${accent??'#1c1f2e'}` }}>
       <div>
         <div className="flex items-center gap-1.5 min-w-0" style={{ color:accent??'#6b7280' }}>
@@ -76,7 +76,7 @@ function StatCard({ icon, label, value, sub, accent }) {
         </div>
         <span className="block font-sans text-xl sm:text-2xl font-bold text-white tracking-tight mt-1 truncate">{value}</span>
       </div>
-      {sub && <span className="font-sans text-[10px] text-slate-500 truncate block mt-0.5">{sub}</span>}
+      {sub && <span className="font-sans text-[10px] sm:text-xs text-slate-400 truncate block mt-0.5 font-medium">{sub}</span>}
     </div>
   )
 }
@@ -119,8 +119,6 @@ const enrichScheduleRow = (r) => {
 }
 
 export default function PublicSchedule() {
-  const navigate = useNavigate()
-
   const [rows, setRows]               = useState([])
   const [loading, setLoading]         = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
@@ -128,13 +126,11 @@ export default function PublicSchedule() {
 
   // Visualizer & Filter States
   const [activeDay, setActiveDay]                   = useState('day1')  // 'day1' | 'day4'
-  const [hideCovered, setHideCovered]               = useState(false)
   const [selectedSlotFilter, setSelectedSlotFilter] = useState(null)
   const [tableDayFilter, setTableDayFilter]         = useState('ALL')   // 'ALL' | 'day1' | 'day4'
   const [allianceFilter, setAllianceFilter]         = useState('ALL')
   const [search, setSearch]                         = useState('')
   const [hoveredData, setHoveredData]               = useState(null)
-  const [unclaimedPromptSlot, setPromptSlot]        = useState(null)
 
   // ── Fetch appointments from Supabase ───────────────────────────────────────
   const fetchData = useCallback(async () => {
@@ -228,33 +224,25 @@ export default function PublicSchedule() {
     })
   }, [rows, activeDay])
 
-  const totalSlots     = 48
-  const coveredSlots   = useMemo(() => slotData.filter(s => s.count >= 1).length, [slotData])
+  const totalSlots   = 48
+  const coveredSlots = useMemo(() => slotData.filter(s => s.count >= 1).length, [slotData])
   const unclaimedSlots = useMemo(() => slotData.filter(s => s.count === 0).length, [slotData])
-  const coveragePct    = Math.round((coveredSlots / totalSlots) * 100)
 
-  const displayedSlots = useMemo(() => {
-    if (hideCovered) {
-      return slotData.filter(s => s.status === 'unclaimed')
-    }
-    return slotData
-  }, [slotData, hideCovered])
-
-  // Unclaimed stats for tabs
-  const d1UnclaimedCount = useMemo(() => {
+  // Count unique slots claimed on Day 1 and Day 4
+  const d1ClaimedCount = useMemo(() => {
     const claimed = new Set()
     rows.forEach(r => {
       if (r.hasD1 && r.time_slot_day1) claimed.add(r.time_slot_day1)
     })
-    return 48 - claimed.size
+    return claimed.size
   }, [rows])
 
-  const d4UnclaimedCount = useMemo(() => {
+  const d4ClaimedCount = useMemo(() => {
     const claimed = new Set()
     rows.forEach(r => {
       if (r.hasD4 && r.time_slot_day4) claimed.add(r.time_slot_day4)
     })
-    return 48 - claimed.size
+    return claimed.size
   }, [rows])
 
   // Table rows filtering
@@ -284,9 +272,7 @@ export default function PublicSchedule() {
   }, [rows, allianceFilter, tableDayFilter, selectedSlotFilter, activeDay, search])
 
   const handleCellClick = (slot, status) => {
-    if (status === 'unclaimed') {
-      setPromptSlot(slot)
-    } else {
+    if (status === 'covered') {
       if (selectedSlotFilter === slot.value) {
         setSelectedSlotFilter(null)
       } else {
@@ -296,13 +282,13 @@ export default function PublicSchedule() {
   }
 
   return (
-    <div className="min-h-screen text-slate-200 overflow-x-hidden" style={{ background: '#0a0b0f' }}>
+    <div className="min-h-screen text-slate-200 overflow-x-hidden flex flex-col items-center" style={{ background: '#0a0b0f' }}>
 
       {/* ── Header ── */}
-      <header className="sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-3 sm:px-6 py-3 backdrop-blur-xl"
-        style={{ background: 'rgba(10,11,15,0.92)', borderBottom: '1px solid #1c1f2e' }}>
+      <header className="sticky top-0 z-30 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-3 backdrop-blur-xl"
+        style={{ background: 'rgba(10,11,15,0.94)', borderBottom: '1px solid #1c1f2e' }}>
 
-        <div className="flex items-center justify-between w-full sm:w-auto gap-3">
+        <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
             <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
               style={{ background: 'rgba(76,110,245,0.2)', border: '1px solid rgba(76,110,245,0.35)' }}>
@@ -326,7 +312,7 @@ export default function PublicSchedule() {
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
           {/* Share Link */}
           <button
             onClick={handleCopyLink}
@@ -346,7 +332,7 @@ export default function PublicSchedule() {
 
           {/* Booking Closed Indicator */}
           <div
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-sans text-xs font-semibold tracking-tight text-rose-300 bg-rose-500/10 border border-rose-500/25"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-sans text-xs font-semibold tracking-tight text-rose-300 bg-rose-500/10 border border-rose-500/25 shrink-0"
             title="Ministry booking submissions are currently closed">
             <Lock className="w-3.5 h-3.5 text-rose-400" />
             <span>Booking Closed</span>
@@ -355,41 +341,104 @@ export default function PublicSchedule() {
       </header>
 
       {/* ── Main Container ── */}
-      <main className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 overflow-x-hidden">
+      <main className="w-full max-w-[1440px] px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 overflow-x-hidden">
 
-        {/* Top Summary Cards: 2-col on mobile, 4-col on tablet/desktop */}
+        {/* ── 1. Minister of Justice: Magpie Profile Section ── */}
+        <section
+          aria-label="Minister of Justice Profile"
+          className="w-full rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-[#131625] via-[#0f111c] to-[#0a0b12] border border-amber-500/35 shadow-2xl relative overflow-hidden">
+          {/* Subtle decorative glow accents */}
+          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-6 relative z-10">
+            {/* Sleek Circular Framed Profile Picture */}
+            <div className="relative shrink-0">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-amber-500 via-amber-300 to-indigo-500 shadow-xl shadow-amber-500/20">
+                <img
+                  src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuI89w7biqTbW1DZ4ASFe40uir-6-hCIAfD3YhU6Qstg&s=10"
+                  alt="Minister of Justice: Magpie"
+                  className="w-full h-full object-cover rounded-full bg-[#12141c]"
+                />
+              </div>
+              <div className="absolute -bottom-1 -right-1 bg-amber-400 text-black text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg flex items-center gap-0.5 border border-amber-900/40">
+                <span>⚖️</span>
+                <span>R4</span>
+              </div>
+            </div>
+
+            {/* Profile Title, Role & Instructions */}
+            <div className="flex-1 space-y-2.5 min-w-0">
+              <div>
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                  <span className="font-sans text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35 flex items-center gap-1">
+                    <span>⚖️</span>
+                    <span>Minister of Justice</span>
+                  </span>
+                  <span className="font-sans text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                    Kingdom 2323
+                  </span>
+                </div>
+                <h2 className="font-sans font-extrabold text-xl sm:text-2xl text-white tracking-tight">
+                  Magpie
+                </h2>
+                <p className="font-sans text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl mt-1">
+                  Overseeing official Kingdom Ministry appointments, speedup coordination, and KvK Preparation Day buff distribution across <strong className="text-white">TEA · VIK · ERA · FFF</strong>.
+                </p>
+              </div>
+
+              {/* Direct Contact Guidelines */}
+              <div className="pt-2 border-t border-[#1c1f2e] flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 font-sans text-xs text-slate-300">
+                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                  <span className="text-amber-400 font-bold">✉️ In-Game:</span>
+                  <span>PM <strong>Magpie</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                  <span className="text-indigo-400 font-bold">💬 Discord:</span>
+                  <span>Tag in <strong>#ministry-desk</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
+                  <span className="text-emerald-400 font-bold">🛡️ Leadership:</span>
+                  <span>Contact your Alliance R4/R5</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 2. Top Summary Cards (2-col on mobile, 4-col on tablet/desktop) ── */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3">
           <StatCard
             icon={<span style={{fontSize:13}}>👥</span>}
             label="Total Booked"
             value={rows.length}
-            sub="TEA, VIK, ERA, FFF"
+            sub="TEA · VIK · ERA · FFF"
           />
           <StatCard
             icon={<span style={{fontSize:13}}>⚒️</span>}
             label="Day 1 (Const/Res)"
-            value={`${48 - d1UnclaimedCount} / 48`}
-            sub={`${d1UnclaimedCount} open`}
-            accent={activeDay === 'day1' ? 'rgba(76,110,245,0.7)' : 'rgba(76,110,245,0.3)'}
+            value={`${d1ClaimedCount} Booked`}
+            sub="0 Open · Closed"
+            accent="rgba(76,110,245,0.7)"
           />
           <StatCard
             icon={<span style={{fontSize:13}}>⚔️</span>}
             label="Day 4 (Training)"
-            value={`${48 - d4UnclaimedCount} / 48`}
-            sub={`${d4UnclaimedCount} open`}
-            accent={activeDay === 'day4' ? 'rgba(245,158,11,0.7)' : 'rgba(245,158,11,0.3)'}
+            value={`${d4ClaimedCount} Booked`}
+            sub="0 Open · Closed"
+            accent="rgba(245,158,11,0.7)"
           />
           <StatCard
-            icon={<Clock className="w-3.5 h-3.5" />}
-            label="Open Slots Today"
-            value={activeDay === 'day1' ? `${d1UnclaimedCount}` : `${d4UnclaimedCount}`}
-            sub={`Free in ${activeDay === 'day1' ? 'Day 1' : 'Day 4'}`}
+            icon={<Lock className="w-3.5 h-3.5 text-rose-400" />}
+            label="Ministry Status"
+            value="Closed"
+            sub="All Slots Finalized"
             accent="rgba(244,63,94,0.6)"
           />
         </div>
 
-        {/* ── Read-Only Slot Coverage Visualizer ── */}
-        <div className="rounded-2xl p-3 sm:p-5 space-y-4 shadow-xl"
+        {/* ── 3. Read-Only Slot Coverage Visualizer ── */}
+        <div className="rounded-2xl p-3.5 sm:p-5 space-y-4 shadow-xl"
           style={{ background: '#0f1117', border: '1px solid #1c1f2e' }}>
 
           {/* Visualizer Header */}
@@ -404,62 +453,45 @@ export default function PublicSchedule() {
                   <h2 className="font-sans font-bold text-white text-sm sm:text-base tracking-tight">
                     24-Hour Time Slot Grid
                   </h2>
-                  <span className="font-sans text-xs px-2.5 py-0.5 rounded-full font-bold tracking-tight"
-                    style={{
-                      background: 'rgba(16,185,129,0.15)',
-                      color: '#6ee7b7',
-                      border: '1px solid rgba(16,185,129,0.3)',
-                    }}>
-                    {coveredSlots} Claimed · {unclaimedSlots} Open
+                  <span className="font-sans text-xs px-2.5 py-0.5 rounded-full font-bold tracking-tight bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                    <Lock className="w-3 h-3 text-rose-400" />
+                    <span>Booking Closed · {coveredSlots} Booked</span>
                   </span>
                 </div>
                 <p className="font-sans text-[11px] text-slate-400 mt-0.5">
-                  Click any covered slot to filter table below · Click open slots to book
+                  Click any booked slot to filter schedule below · Unassigned slots are locked
                 </p>
               </div>
             </div>
 
-            {/* Day Switcher & Hide Covered Toggle */}
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full md:w-auto">
-              <div className="flex items-center p-1 rounded-xl bg-[#0a0b0f] border border-[#1c1f2e] flex-1 sm:flex-none justify-center">
-                <button
-                  onClick={() => { setActiveDay('day1'); setSelectedSlotFilter(null) }}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-xs font-bold tracking-tight transition-all"
-                  style={activeDay === 'day1'
-                    ? { background: 'rgba(76, 110, 245, 0.22)', color: '#748ffc', border: '1px solid rgba(76, 110, 245, 0.45)' }
-                    : { color: '#6b7280', border: '1px solid transparent' }}>
-                  <span>⚒️</span>
-                  <span>Day 1</span>
-                  <span className="font-sans text-[10px] px-1.5 py-0.5 rounded font-semibold tracking-tight"
-                    style={{ background: 'rgba(0,0,0,0.4)', color: activeDay === 'day1' ? '#a5b4fc' : '#6b7280' }}>
-                    {d1UnclaimedCount}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => { setActiveDay('day4'); setSelectedSlotFilter(null) }}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg font-sans text-xs font-bold tracking-tight transition-all"
-                  style={activeDay === 'day4'
-                    ? { background: 'rgba(245, 158, 11, 0.22)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.45)' }
-                    : { color: '#6b7280', border: '1px solid transparent' }}>
-                  <span>⚔️</span>
-                  <span>Day 4</span>
-                  <span className="font-sans text-[10px] px-1.5 py-0.5 rounded font-semibold tracking-tight"
-                    style={{ background: 'rgba(0,0,0,0.4)', color: activeDay === 'day4' ? '#fde68a' : '#6b7280' }}>
-                    {d4UnclaimedCount}
-                  </span>
-                </button>
-              </div>
+            {/* Day Switcher */}
+            <div className="flex items-center p-1 rounded-xl bg-[#0a0b0f] border border-[#1c1f2e] w-full md:w-auto justify-center">
+              <button
+                onClick={() => { setActiveDay('day1'); setSelectedSlotFilter(null) }}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-sans text-xs font-bold tracking-tight transition-all"
+                style={activeDay === 'day1'
+                  ? { background: 'rgba(76, 110, 245, 0.22)', color: '#748ffc', border: '1px solid rgba(76, 110, 245, 0.45)' }
+                  : { color: '#6b7280', border: '1px solid transparent' }}>
+                <span>⚒️</span>
+                <span>Day 1</span>
+                <span className="font-sans text-[10px] px-2 py-0.5 rounded font-semibold tracking-tight"
+                  style={{ background: 'rgba(0,0,0,0.4)', color: activeDay === 'day1' ? '#a5b4fc' : '#6b7280' }}>
+                  {d1ClaimedCount} Booked
+                </span>
+              </button>
 
               <button
-                onClick={() => setHideCovered(p => !p)}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-sans text-xs font-semibold tracking-tight transition-all"
-                style={hideCovered
-                  ? { background: 'rgba(244, 63, 94, 0.16)', border: '1px solid rgba(244, 63, 94, 0.45)', color: '#fda4af' }
-                  : { background: '#0a0b0f', border: '1px solid #1c1f2e', color: '#9ca3af' }}>
-                {hideCovered ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                <span className="hidden sm:inline">{hideCovered ? 'Showing Open Only' : 'Hide Covered'}</span>
-                <span className="sm:hidden">{hideCovered ? 'Open Only' : 'Hide'}</span>
+                onClick={() => { setActiveDay('day4'); setSelectedSlotFilter(null) }}
+                className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg font-sans text-xs font-bold tracking-tight transition-all"
+                style={activeDay === 'day4'
+                  ? { background: 'rgba(245, 158, 11, 0.22)', color: '#fcd34d', border: '1px solid rgba(245, 158, 11, 0.45)' }
+                  : { color: '#6b7280', border: '1px solid transparent' }}>
+                <span>⚔️</span>
+                <span>Day 4</span>
+                <span className="font-sans text-[10px] px-2 py-0.5 rounded font-semibold tracking-tight"
+                  style={{ background: 'rgba(0,0,0,0.4)', color: activeDay === 'day4' ? '#fde68a' : '#6b7280' }}>
+                  {d4ClaimedCount} Booked
+                </span>
               </button>
             </div>
           </div>
@@ -469,17 +501,17 @@ export default function PublicSchedule() {
             <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded shrink-0"
-                  style={{ background: 'rgba(244,63,94,0.06)', border: '1px dashed rgba(244,63,94,0.55)' }} />
-                <span className="font-sans text-[11px] text-slate-400">
-                  Open ({unclaimedSlots})
+                  style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.55)' }} />
+                <span className="font-sans text-[11px] text-slate-300">
+                  Booked ({coveredSlots})
                 </span>
               </div>
 
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded shrink-0"
-                  style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.55)' }} />
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.2)' }} />
                 <span className="font-sans text-[11px] text-slate-400">
-                  Booked ({coveredSlots})
+                  Closed / Unassigned ({unclaimedSlots})
                 </span>
               </div>
             </div>
@@ -492,13 +524,13 @@ export default function PublicSchedule() {
                   Clear Slot Filter ({selectedSlotFilter})
                 </button>
               )}
-              <span className="shrink-0">{displayedSlots.length} of {totalSlots} slots</span>
+              <span className="shrink-0">{slotData.length} of {totalSlots} slots</span>
             </div>
           </div>
 
           {/* 48 Slots Heatmap Grid: 2-col on mobile, 3-col on sm, 4-col on md, 6-col on lg, 8-col on xl, 12-col on 2xl */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 2xl:grid-cols-12 gap-2">
-            {displayedSlots.map(({ slot, signups, count, status }) => {
+            {slotData.map(({ slot, signups, count, status }) => {
               const isUnclaimed = status === 'unclaimed'
               const isSelected  = selectedSlotFilter === slot.value
 
@@ -508,8 +540,8 @@ export default function PublicSchedule() {
                 bgStyle     = 'rgba(99, 102, 241, 0.25)'
                 glowStyle   = '0 0 16px rgba(129, 140, 248, 0.4)'
               } else if (isUnclaimed) {
-                borderStyle = '1px dashed rgba(244, 63, 94, 0.45)'
-                bgStyle     = 'rgba(244, 63, 94, 0.04)'
+                borderStyle = '1px dashed rgba(255, 255, 255, 0.12)'
+                bgStyle     = 'rgba(255, 255, 255, 0.02)'
                 glowStyle   = 'none'
               } else {
                 borderStyle = '1px solid rgba(16, 185, 129, 0.4)'
@@ -528,12 +560,12 @@ export default function PublicSchedule() {
                     setHoveredData({ slot, signups, status, rect })
                   }}
                   onMouseLeave={() => setHoveredData(null)}
-                  className={`group relative flex flex-col justify-between p-2 sm:p-2.5 rounded-xl transition-all select-none cursor-pointer min-w-0 ${
+                  className={`group relative flex flex-col justify-between p-2 sm:p-2.5 rounded-xl transition-all select-none min-w-0 ${
                     isUnclaimed
-                      ? 'hover:border-rose-400 hover:bg-rose-950/25 active:scale-95'
+                      ? 'opacity-65 cursor-default'
                       : isSelected
-                        ? 'scale-102 ring-1 ring-indigo-400'
-                        : 'hover:border-indigo-400/80 hover:bg-slate-800/40 active:scale-98'
+                        ? 'scale-102 ring-1 ring-indigo-400 cursor-pointer'
+                        : 'hover:border-indigo-400/80 hover:bg-slate-800/40 active:scale-98 cursor-pointer'
                   }`}
                   style={{
                     border: borderStyle,
@@ -553,8 +585,8 @@ export default function PublicSchedule() {
                       <span className="w-2 h-2 rounded-full shrink-0"
                         style={{ background: '#10b981', boxShadow: '0 0 6px #10b981' }} />
                     ) : (
-                      <span className="font-sans text-[10px] text-rose-400 font-bold tracking-wide uppercase group-hover:text-rose-300 shrink-0">
-                        FREE
+                      <span className="font-sans text-[9px] text-slate-500 font-bold tracking-wider uppercase shrink-0">
+                        CLOSED
                       </span>
                     )}
                   </div>
@@ -562,9 +594,9 @@ export default function PublicSchedule() {
                   {/* Bottom line: Player Name & Alliance/TC */}
                   <div className="mt-1 min-w-0">
                     {isUnclaimed ? (
-                      <div className="flex items-center gap-1 font-sans text-[10px] text-rose-300/80 group-hover:text-rose-200 min-w-0">
-                        <Sparkles className="w-3 h-3 shrink-0" />
-                        <span className="font-semibold tracking-tight truncate min-w-0">Open Slot</span>
+                      <div className="flex items-center gap-1 font-sans text-[10px] text-slate-500 min-w-0">
+                        <Lock className="w-2.5 h-2.5 shrink-0 text-slate-600" />
+                        <span className="font-medium tracking-tight truncate min-w-0">Unassigned</span>
                       </div>
                     ) : (
                       <div className="flex flex-col min-w-0">
@@ -594,7 +626,7 @@ export default function PublicSchedule() {
         {selectedSlotFilter && (
           <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-300">
             <div className="flex items-center gap-2 font-sans text-xs">
-              <Filter className="w-3.5 h-3.5 text-indigo-400" />
+              <Filter className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
               <span>
                 Filtering schedule for slot: <strong className="text-white font-semibold">{selectedSlotFilter} UTC</strong> ({activeDay === 'day1' ? 'Day 1' : 'Day 4'})
               </span>
@@ -602,28 +634,28 @@ export default function PublicSchedule() {
             </div>
             <button
               onClick={() => setSelectedSlotFilter(null)}
-              className="flex items-center gap-1 text-xs font-sans font-semibold text-indigo-300 hover:text-white px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 transition-colors">
+              className="flex items-center gap-1 text-xs font-sans font-semibold text-indigo-300 hover:text-white px-2 py-0.5 rounded bg-indigo-500/20 hover:bg-indigo-500/30 transition-colors shrink-0">
               <X className="w-3 h-3" />
               <span>Clear Filter</span>
             </button>
           </div>
         )}
 
-        {/* ── Searchable Alliance Schedule Directory ── */}
+        {/* ── 4. Searchable Alliance Schedule Directory ── */}
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="font-sans font-bold text-base text-white tracking-tight">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="text-center md:text-left">
+              <h3 className="font-sans font-bold text-base sm:text-lg text-white tracking-tight">
                 Player Directory
               </h3>
               <p className="font-sans text-xs text-slate-400">
-                Search your player name or alliance to find your assigned time slot
+                Search your commander name or alliance to verify your assigned time slot
               </p>
             </div>
 
             {/* Filter pills & search */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full sm:w-auto">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center md:justify-end gap-2.5 w-full md:w-auto">
+              <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:w-auto">
                 {/* Day filter for list */}
                 <div className="flex items-center gap-1 bg-[#0f1117] p-1 rounded-xl border border-[#1c1f2e]">
                   {[['ALL', 'All Days'], ['day1', '⚒️ Day 1'], ['day4', '⚔️ Day 4']].map(([d, lbl]) => (
@@ -632,8 +664,8 @@ export default function PublicSchedule() {
                       onClick={() => setTableDayFilter(d)}
                       className={`px-2.5 py-1 rounded-lg font-sans text-xs font-semibold tracking-tight transition-all ${
                         tableDayFilter === d
-                          ? 'bg-indigo-500/20 text-indigo-300'
-                          : 'text-slate-400 hover:text-slate-200'
+                          ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
+                          : 'text-slate-400 hover:text-slate-200 border border-transparent'
                       }`}>
                       {lbl}
                     </button>
@@ -641,7 +673,7 @@ export default function PublicSchedule() {
                 </div>
 
                 {/* Alliance filter */}
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
                   {['ALL', ...ALLIANCES].map(a => (
                     <button
                       key={a}
@@ -651,72 +683,131 @@ export default function PublicSchedule() {
                           ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
                           : 'bg-[#0f1117] text-slate-400 border border-[#1c1f2e] hover:text-slate-200'
                       }`}>
-                      {a === 'ALL' ? 'All Alliances' : a}
+                      {a === 'ALL' ? 'All' : a}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Search */}
-              <div className="relative w-full sm:w-auto">
+              <div className="relative w-full sm:w-52">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 pointer-events-none" />
                 <input
                   type="text"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  placeholder="Find your name…"
-                  className="w-full sm:w-48 pl-8 pr-4 py-1.5 rounded-xl font-sans text-xs bg-[#0f1117] border border-[#1c1f2e] text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
+                  placeholder="Find commander…"
+                  className="w-full pl-8 pr-4 py-1.5 rounded-xl font-sans text-xs bg-[#0f1117] border border-[#1c1f2e] text-slate-100 placeholder-slate-600 focus:outline-none focus:border-indigo-500/50"
                 />
               </div>
             </div>
           </div>
 
-          {/* Table */}
+          {/* Directory Content */}
           {loading ? (
             <div className="flex items-center justify-center py-20 text-slate-500 font-sans text-sm">
               <RefreshCw className="w-5 h-5 animate-spin mr-2" />
               Loading schedule…
             </div>
           ) : displayed.length === 0 ? (
-            <div className="py-16 text-center text-slate-500 font-sans text-xs rounded-2xl border border-[#1c1f2e] bg-[#0f1117]">
+            <div className="py-16 text-center text-slate-500 font-sans text-xs rounded-2xl border border-[#1c1f2e] bg-[#0f1117] px-4">
               No player appointments match the current search or slot filter.
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden border border-[#1c1f2e] bg-[#0f1117]">
-              <div className="overflow-x-auto">
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                  <thead>
-                    <tr style={{ background: '#0a0b0f', borderBottom: '1px solid #1c1f2e' }}>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>#</th>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Player</th>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Alliance</th>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>TC Level</th>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Day 1 Slot (Const/Res)</th>
-                      <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Day 4 Slot (Training)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayed.map((r, idx) => (
-                      <tr key={r.id} className="border-b border-[#141620] hover:bg-white/[0.02] transition-colors">
-                        <td style={{ padding:'12px 14px', color:'#4b5563', fontWeight:700 }}>{idx+1}</td>
-                        <td style={{ padding:'12px 14px', color:'#f8fafc', fontWeight:600, whiteSpace:'nowrap' }}>{r.player_name}</td>
-                        <td style={{ padding:'12px 14px', whiteSpace:'nowrap' }}><AllianceBadge alliance={r.alliance} /></td>
-                        <td style={{ padding:'12px 14px', whiteSpace:'nowrap' }}><TcBadge level={r.tc_level} /></td>
-                        <td className="font-sans text-xs tracking-tight"
-                          style={{ padding:'12px 14px', whiteSpace:'nowrap', color: r.hasD1 && r.time_slot_day1 ? '#748ffc' : '#4b5563', fontWeight: r.hasD1 && r.time_slot_day1 ? 600 : 400 }}>
-                          {r.hasD1 ? fmtSlot(r.time_slot_day1) : '—'}
-                        </td>
-                        <td className="font-sans text-xs tracking-tight"
-                          style={{ padding:'12px 14px', whiteSpace:'nowrap', color: r.hasD4 && r.time_slot_day4 ? '#fcd34d' : '#4b5563', fontWeight: r.hasD4 && r.time_slot_day4 ? 600 : 400 }}>
-                          {r.hasD4 ? fmtSlot(r.time_slot_day4) : '—'}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            <div className="space-y-3">
+              {/* Mobile Card-Based Schedule Directory (Visible on < md) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 md:hidden">
+                {displayed.map((r, idx) => (
+                  <div
+                    key={r.id}
+                    className="p-3.5 rounded-2xl bg-[#0f1117] border border-[#1c1f2e] space-y-2.5 shadow-md">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-sans text-[11px] font-bold text-slate-500 shrink-0">
+                          #{idx + 1}
+                        </span>
+                        <span className="font-sans font-bold text-sm text-white truncate">
+                          {r.player_name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <AllianceBadge alliance={r.alliance} />
+                        <TcBadge level={r.tc_level} />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-[#1c1f2e]/70 text-xs font-sans">
+                      {r.hasD1 && r.time_slot_day1 ? (
+                        <div className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-200">
+                          <span className="font-semibold flex items-center gap-1 text-[11px]">
+                            <span>⚒️</span>
+                            <span>Day 1 (Const/Res):</span>
+                          </span>
+                          <span className="font-mono font-bold text-[11px] text-indigo-300 shrink-0">
+                            {fmtSlot(r.time_slot_day1)}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {r.hasD4 && r.time_slot_day4 ? (
+                        <div className="flex items-center justify-between gap-2 p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200">
+                          <span className="font-semibold flex items-center gap-1 text-[11px]">
+                            <span>⚔️</span>
+                            <span>Day 4 (Training):</span>
+                          </span>
+                          <span className="font-mono font-bold text-[11px] text-amber-300 shrink-0">
+                            {fmtSlot(r.time_slot_day4)}
+                          </span>
+                        </div>
+                      ) : null}
+
+                      {!r.hasD1 && !r.hasD4 && (
+                        <span className="text-slate-500 text-[11px] italic">No active slots</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center justify-between px-4 py-2.5 font-sans text-xs text-slate-500 border-t border-[#1c1f2e]">
-                <span>Showing {displayed.length} of {rows.length} players</span>
+
+              {/* Desktop Table View (Visible on >= md) */}
+              <div className="hidden md:block rounded-2xl overflow-hidden border border-[#1c1f2e] bg-[#0f1117]">
+                <div className="overflow-x-auto">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: '#0a0b0f', borderBottom: '1px solid #1c1f2e' }}>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>#</th>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Player</th>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Alliance</th>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>TC Level</th>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Day 1 Slot (Const/Res)</th>
+                        <th style={{ padding:'10px 14px', textAlign:'left', fontSize:11, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:'0.07em' }}>Day 4 Slot (Training)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayed.map((r, idx) => (
+                        <tr key={r.id} className="border-b border-[#141620] hover:bg-white/[0.02] transition-colors">
+                          <td style={{ padding:'12px 14px', color:'#4b5563', fontWeight:700 }}>{idx+1}</td>
+                          <td style={{ padding:'12px 14px', color:'#f8fafc', fontWeight:600, whiteSpace:'nowrap' }}>{r.player_name}</td>
+                          <td style={{ padding:'12px 14px', whiteSpace:'nowrap' }}><AllianceBadge alliance={r.alliance} /></td>
+                          <td style={{ padding:'12px 14px', whiteSpace:'nowrap' }}><TcBadge level={r.tc_level} /></td>
+                          <td className="font-sans text-xs tracking-tight"
+                            style={{ padding:'12px 14px', whiteSpace:'nowrap', color: r.hasD1 && r.time_slot_day1 ? '#748ffc' : '#4b5563', fontWeight: r.hasD1 && r.time_slot_day1 ? 600 : 400 }}>
+                            {r.hasD1 ? fmtSlot(r.time_slot_day1) : '—'}
+                          </td>
+                          <td className="font-sans text-xs tracking-tight"
+                            style={{ padding:'12px 14px', whiteSpace:'nowrap', color: r.hasD4 && r.time_slot_day4 ? '#fcd34d' : '#4b5563', fontWeight: r.hasD4 && r.time_slot_day4 ? 600 : 400 }}>
+                            {r.hasD4 ? fmtSlot(r.time_slot_day4) : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Directory Footer */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-2.5 font-sans text-xs text-slate-500 rounded-xl bg-[#0f1117] border border-[#1c1f2e]">
+                <span>Showing {displayed.length} of {rows.length} commanders</span>
                 {lastUpdated && (
                   <span>Live synced {lastUpdated.toLocaleTimeString()}</span>
                 )}
@@ -725,36 +816,6 @@ export default function PublicSchedule() {
           )}
         </div>
       </main>
-
-      {/* ── Open Slot Click Prompt Modal ── */}
-      {unclaimedPromptSlot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm rounded-2xl p-6 bg-[#0f1117] border border-rose-500/30 shadow-2xl space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
-                <Lock className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-sans font-bold text-white text-base">Unclaimed Slot</h3>
-                <p className="font-sans text-xs text-slate-400">{unclaimedPromptSlot.label}</p>
-              </div>
-            </div>
-
-            <p className="font-sans text-xs text-slate-300 leading-relaxed">
-              This 30-minute slot on <strong className="text-white">{activeDay === 'day1' ? 'Day 1' : 'Day 4'}</strong> currently has 0 assigned players.
-              Public bookings are now closed. If your alliance needs this slot, please contact your alliance leadership (R4 / R5) to be manually assigned.
-            </p>
-
-            <div className="pt-2">
-              <button
-                onClick={() => setPromptSlot(null)}
-                className="w-full py-2.5 rounded-xl font-sans text-xs font-semibold bg-[#1c1f2e] text-slate-300 hover:text-white transition-colors cursor-pointer">
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ── Tooltip (Clean: Player Name, Alliance, TC, Slot only) ── */}
       {hoveredData && (
@@ -779,7 +840,7 @@ export default function PublicSchedule() {
               background: 'rgba(15, 17, 23, 0.97)',
               border: hoveredData.status === 'covered'
                 ? '1px solid rgba(16, 185, 129, 0.45)'
-                : '1px solid rgba(244, 63, 94, 0.45)',
+                : '1px solid rgba(255, 255, 255, 0.15)',
               boxShadow: '0 16px 40px rgba(0,0,0,0.85)',
             }}
           >
@@ -795,15 +856,15 @@ export default function PublicSchedule() {
                 style={{
                   background: hoveredData.status === 'covered'
                     ? 'rgba(16,185,129,0.2)'
-                    : 'rgba(244,63,94,0.18)',
+                    : 'rgba(255,255,255,0.06)',
                   color: hoveredData.status === 'covered'
                     ? '#6ee7b7'
-                    : '#fda4af',
+                    : '#9ca3af',
                 }}
               >
                 {hoveredData.status === 'covered'
                   ? `${hoveredData.signups.length} Player${hoveredData.signups.length !== 1 ? 's' : ''}`
-                  : 'Open Slot'}
+                  : 'Closed'}
               </span>
             </div>
 
@@ -822,13 +883,13 @@ export default function PublicSchedule() {
                   </div>
                 ))}
                 <p className="font-sans text-[10px] text-slate-400 text-center pt-0.5">
-                  Click slot to filter list below
+                  Click slot to filter schedule below
                 </p>
               </div>
             ) : (
-              <div className="py-2 text-center text-xs">
-                <p className="font-sans font-semibold text-rose-300">Open Time Slot</p>
-                <p className="font-sans text-[10px] text-slate-400 mt-0.5">Click to book this appointment</p>
+              <div className="py-1 text-center text-xs space-y-0.5">
+                <p className="font-sans font-semibold text-slate-400">Unassigned Time Slot</p>
+                <p className="font-sans text-[10px] text-slate-500">Public booking is closed</p>
               </div>
             )}
           </div>
