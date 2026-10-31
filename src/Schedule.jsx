@@ -346,62 +346,43 @@ export default function PublicSchedule() {
         {/* ── 1. Minister of Justice: Magpie Profile Section ── */}
         <section
           aria-label="Minister of Justice Profile"
-          className="w-full rounded-2xl p-4 sm:p-6 bg-gradient-to-br from-[#131625] via-[#0f111c] to-[#0a0b12] border border-amber-500/35 shadow-2xl relative overflow-hidden">
+          className="w-full rounded-2xl p-4 sm:p-5 bg-gradient-to-br from-[#131625] via-[#0f111c] to-[#0a0b12] border border-amber-500/30 shadow-xl relative overflow-hidden">
           {/* Subtle decorative glow accents */}
-          <div className="absolute -right-20 -top-20 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-          <div className="absolute -left-20 -bottom-20 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -right-16 -top-16 w-48 h-48 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
+          <div className="absolute -left-16 -bottom-16 w-48 h-48 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
 
-          <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-6 relative z-10">
+          <div className="flex flex-col sm:flex-row items-center text-center sm:text-left gap-3.5 sm:gap-5 relative z-10">
             {/* Sleek Circular Framed Profile Picture */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full p-1 bg-gradient-to-tr from-amber-500 via-amber-300 to-indigo-500 shadow-xl shadow-amber-500/20">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full p-0.5 sm:p-1 bg-gradient-to-tr from-amber-500 via-amber-300 to-indigo-500 shadow-lg shadow-amber-500/20">
                 <img
                   src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRuI89w7biqTbW1DZ4ASFe40uir-6-hCIAfD3YhU6Qstg&s=10"
                   alt="Minister of Justice: Magpie"
                   className="w-full h-full object-cover rounded-full bg-[#12141c]"
                 />
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-amber-400 text-black text-[10px] sm:text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg flex items-center gap-0.5 border border-amber-900/40">
-                <span>⚖️</span>
-                <span>R4</span>
-              </div>
             </div>
 
-            {/* Profile Title, Role & Instructions */}
-            <div className="flex-1 space-y-2.5 min-w-0">
-              <div>
-                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
-                  <span className="font-sans text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/35 flex items-center gap-1">
-                    <span>⚖️</span>
-                    <span>Minister of Justice</span>
-                  </span>
-                  <span className="font-sans text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
-                    Kingdom 2323
-                  </span>
-                </div>
-                <h2 className="font-sans font-extrabold text-xl sm:text-2xl text-white tracking-tight">
-                  Magpie
-                </h2>
-                <p className="font-sans text-xs sm:text-sm text-slate-300 leading-relaxed max-w-2xl mt-1">
-                  Overseeing official Kingdom Ministry appointments, speedup coordination, and KvK Preparation Day buff distribution across <strong className="text-white">TEA · VIK · ERA · FFF</strong>.
-                </p>
+            {/* Profile Info */}
+            <div className="space-y-1 min-w-0">
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 sm:gap-2">
+                <span className="font-sans text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/35 flex items-center gap-1">
+                  <span>⚖️</span>
+                  <span>Minister of Justice</span>
+                </span>
+                <span className="font-sans text-[11px] font-semibold px-2 py-0.5 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">
+                  Kingdom 2323
+                </span>
+                <AllianceBadge alliance="TEA" />
               </div>
 
-              {/* Direct Contact Guidelines */}
-              <div className="pt-2 border-t border-[#1c1f2e] flex flex-wrap items-center justify-center sm:justify-start gap-2 sm:gap-3 font-sans text-xs text-slate-300">
-                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-                  <span className="text-amber-400 font-bold">✉️ In-Game:</span>
-                  <span>PM <strong>Magpie</strong></span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-                  <span className="text-indigo-400 font-bold">💬 Discord:</span>
-                  <span>Tag in <strong>#ministry-desk</strong></span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-black/40 px-3 py-1.5 rounded-xl border border-white/5">
-                  <span className="text-emerald-400 font-bold">🛡️ Leadership:</span>
-                  <span>Contact your Alliance R4/R5</span>
-                </div>
-              </div>
+              <h2 className="font-sans font-extrabold text-xl sm:text-2xl text-white tracking-tight">
+                Magpie
+              </h2>
+
+              <p className="font-sans text-xs sm:text-sm font-semibold text-amber-300/90 tracking-wide">
+                PM In-Game
+              </p>
             </div>
           </div>
         </section>
