@@ -1,8 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Crown, Sword, Hammer, FlaskConical, Coins, Clock,
   Shield, Send, Loader2, CheckCircle2, XCircle, AlertCircle,
-  Sparkles, X, User, ChevronDown, Globe, Plus, Minus
+  Sparkles, X, User, ChevronDown, Globe, Plus, Minus,
+  Lock, ArrowRight, Calendar, KeyRound, Unlock
 } from 'lucide-react'
 import { supabase } from './lib/supabase.js'
 
@@ -107,6 +109,12 @@ const T = {
     errFailed:     'Submission Failed',
     errCheck:      'Fix the highlighted fields.',
     footer: 'All times UTC · 30-minute slots · 2323 KvK',
+    closedBadge: 'Registration Closed',
+    closedTitle: 'KvK Ministry Booking is Closed',
+    closedSubtitle: 'The appointment booking window has concluded.',
+    closedDesc: 'Submissions are now closed while alliance leadership (TEA, VIK, ERA, FFF) finalizes kingdom speedup schedules for KvK Prep Days. Please check the public schedule to verify your assigned time slots.',
+    btnViewSchedule: 'View Kingdom Schedule & Assigned Slots',
+    btnAdminLogin: 'Alliance Leadership / R4 Portal',
   },
   es: {
     badge: 'Servidor 2323 · Temporada KvK',
@@ -145,6 +153,12 @@ const T = {
     errNetwork: 'Error de Red', errNetworkMsg: 'No se pudo contactar Discord.',
     errFailed: 'Error al Enviar', errCheck: 'Corrige los campos marcados.',
     footer: 'Horarios en UTC · Franjas de 30 min · 2323 KvK',
+    closedBadge: 'Inscripción Cerrada',
+    closedTitle: 'La Reserva del Ministerio KvK está Cerrada',
+    closedSubtitle: 'El período de solicitud de citas ha finalizado.',
+    closedDesc: 'Las solicitudes están cerradas mientras el liderazgo de las alianzas (TEA, VIK, ERA, FFF) finaliza los horarios de aceleradores para los días de preparación KvK. Consulta el calendario público para verificar tus franjas horarias asignadas.',
+    btnViewSchedule: 'Ver Calendario y Franjas Asignadas',
+    btnAdminLogin: 'Portal de Liderazgo / R4',
   },
   pt: {
     badge: 'Servidor 2323 · Temporada KvK',
@@ -176,13 +190,19 @@ const T = {
     btnSubmit: 'Reservar Consulta no Ministério', btnSubmitting: 'Enviando…',
     successTitle: 'Consulta Reservada!', successMsg: 'Sua solicitação foi enviada ao canal Discord da aliança.', successClose: 'Feito',
     rowCommander: 'Comandante', rowAlliance: 'Aliança', rowDay: 'Dia KvK',
-    rowTc: 'Nível TC', rowSlot: 'Horário', rowSlotDay1: 'Horário Dia 1', rowSlotDay4: 'Horário Dia 4',
+    rowTc: 'Nivel TC', rowSlot: 'Horário', rowSlotDay1: 'Horário Dia 1', rowSlotDay4: 'Horário Dia 4',
     errName: 'Nome do jogador é obrigatório.', errAlliance: 'Selecione sua aliança.',
     errDay: 'Selecione ao menos um dia de preparação.', errTc: 'Selecione o nível do seu TC.',
     errSlot: 'Selecione um horário.',
     errNetwork: 'Erro de Rede', errNetworkMsg: 'Não foi possível alcançar o Discord.',
     errFailed: 'Falha no Envio', errCheck: 'Corrija os campos destacados.',
     footer: 'Horários em UTC · Intervalos de 30 min · 2323 KvK',
+    closedBadge: 'Inscrições Encerradas',
+    closedTitle: 'A Reserva do Ministério KvK está Fechada',
+    closedSubtitle: 'O período de agendamento de consultas terminou.',
+    closedDesc: 'Os envios foram encerrados enquanto a liderança (TEA, VIK, ERA, FFF) finaliza a coordenação dos horários de aceleradores para o KvK. Verifique o cronograma público para checar seus horários atribuídos.',
+    btnViewSchedule: 'Ver Cronograma e Horários Atribuídos',
+    btnAdminLogin: 'Portal da Liderança / R4',
   },
   ar: {
     badge: 'خادم 2323 · موسم KvK',
@@ -221,6 +241,12 @@ const T = {
     errNetwork: 'خطأ في الشبكة', errNetworkMsg: 'تعذر الوصول إلى Discord.',
     errFailed: 'فشل الإرسال', errCheck: 'صحح الحقول المميزة.',
     footer: '2323 KvK · جميع الأوقات بتوقيت UTC · فترات 30 دقيقة',
+    closedBadge: 'التسجيل مغلق',
+    closedTitle: 'حجز موعد وزارة KvK مغلق حاليًا',
+    closedSubtitle: 'انتهت فترة حجز المواعيد الرسمية.',
+    closedDesc: 'تم إغلاق تقديم الطلبات حيث تقوم قيادة التحالفات (TEA, VIK, ERA, FFF) بوضع اللمسات الأخيرة على جدول التسريعات لمملكة 2323. يُرجى مراجعة الجدول العام للتحقق من المواعيد المخصصة.',
+    btnViewSchedule: 'عرض جدول المملكة والمواعيد المخصصة',
+    btnAdminLogin: 'بوابة قيادة التحالفات / R4',
   },
   de: {
     badge: 'Server 2323 · KvK-Saison',
@@ -259,6 +285,12 @@ const T = {
     errNetwork: 'Netzwerkfehler', errNetworkMsg: 'Discord konnte nicht erreicht werden.',
     errFailed: 'Übermittlung fehlgeschlagen', errCheck: 'Korrigiere die markierten Felder.',
     footer: 'Alle Zeiten UTC · 30-Minuten-Slots · 2323 KvK',
+    closedBadge: 'Registrierung Geschlossen',
+    closedTitle: 'KvK-Ministerium Terminbuchung ist Geschlossen',
+    closedSubtitle: 'Das Zeitfenster für Terminbuchungen ist abgelaufen.',
+    closedDesc: 'Einsendungen sind nun geschlossen, während die Führung (TEA, VIK, ERA, FFF) die Zeitpläne für die KvK-Vorbereitungstage finalisiert. Bitte prüfen Sie den öffentlichen Zeitplan, um Ihre Zeitfenster einzusehen.',
+    btnViewSchedule: 'Öffentlichen Zeitplan & Zeitfenster ansehen',
+    btnAdminLogin: 'Allianzführung / R4-Portal',
   },
 }
 
@@ -783,14 +815,183 @@ function SRow({ label, value }) {
   )
 }
 
+// ─── Booking Closed Notice Card ───────────────────────────────────────────────
+function BookingClosedCard({ t, isRTL, lang, setLang, onUnlockRequest }) {
+  const navigate = useNavigate()
+
+  return (
+    <div className="w-full overflow-hidden"
+      style={{ maxWidth: 650, background: '#0f1117', borderRadius: 22,
+               animation: 'slideUp 0.4s ease-out, cardGlow 5s ease-in-out infinite',
+               border: '1px solid rgba(244,63,94,0.3)' }}>
+      {/* Top Rose Accent Strip */}
+      <div className="h-1 w-full"
+        style={{ background: 'linear-gradient(90deg, #f43f5e 0%, #fb7185 50%, #4c6ef5 100%)' }} />
+
+      {/* Card Header with Crown & Language Switcher */}
+      <div className="flex items-center justify-between px-5 py-3"
+        style={{ borderBottom: '1px solid #1c1f2e', background: 'rgba(18,20,28,0.5)' }}>
+        <div className="flex items-center gap-2">
+          <Crown className="w-4 h-4" style={{ color: '#f43f5e' }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#fda4af',
+                         textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            Ministry Status
+          </span>
+        </div>
+        <LangSwitcher lang={lang} setLang={setLang} />
+      </div>
+
+      <div className="p-6 sm:p-8 space-y-6 text-center">
+        {/* Lock Icon Badge */}
+        <div className="flex flex-col items-center justify-center">
+          <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl flex items-center justify-center mb-4"
+            style={{
+              background: 'radial-gradient(circle, rgba(244,63,94,0.22) 0%, rgba(244,63,94,0.04) 70%)',
+              border: '1px solid rgba(244,63,94,0.45)',
+              boxShadow: '0 0 32px rgba(244,63,94,0.25)',
+            }}>
+            <Lock className="w-8 h-8 sm:w-10 sm:h-10 text-rose-400" />
+            <div className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-rose-500 flex items-center justify-center text-white text-[10px] font-bold shadow-lg">
+              ✕
+            </div>
+          </div>
+
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans font-bold tracking-wider uppercase mb-2.5"
+            style={{
+              background: 'rgba(244,63,94,0.15)',
+              color: '#fda4af',
+              border: '1px solid rgba(244,63,94,0.35)',
+            }}>
+            <Lock className="w-3 h-3 text-rose-400" />
+            <span>{t.closedBadge}</span>
+          </span>
+
+          <h2 className="font-bold text-white tracking-tight"
+            style={{
+              fontFamily: "'Rajdhani', sans-serif",
+              fontSize: 'clamp(1.5rem, 5vw, 2.15rem)',
+              lineHeight: 1.15,
+            }}>
+            {t.closedTitle}
+          </h2>
+
+          <p className="font-sans text-sm text-slate-400 mt-2.5 max-w-lg leading-relaxed">
+            {t.closedDesc}
+          </p>
+        </div>
+
+        {/* KvK Prep Schedule Summary Box */}
+        <div className="rounded-xl p-4 text-left space-y-3 font-sans"
+          style={{ background: '#0a0b0f', border: '1px solid #1c1f2e' }}>
+          <div className="flex items-center justify-between pb-2 border-b border-[#1c1f2e] text-xs font-bold uppercase tracking-wider text-slate-400">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+              <span>KvK Prep Schedule</span>
+            </span>
+            <span className="text-amber-400 font-semibold text-[11px]">Finalizing Slots</span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚒️</span>
+              <div>
+                <span className="font-semibold text-slate-200">Day 1</span>
+                <span className="text-slate-500 block text-[11px]">{t.day1Sub}</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 uppercase tracking-wider">
+              Closed
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className="text-base">⚔️</span>
+              <div>
+                <span className="font-semibold text-slate-200">Day 4</span>
+                <span className="text-slate-500 block text-[11px]">{t.day4Sub}</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-rose-500/15 text-rose-300 border border-rose-500/30 uppercase tracking-wider">
+              Closed
+            </span>
+          </div>
+
+          <div className="pt-2 border-t border-[#1c1f2e] flex items-center justify-between text-[11px] text-slate-500">
+            <span>Kingdom Alliances</span>
+            <span className="font-bold text-slate-300">TEA · VIK · ERA · FFF</span>
+          </div>
+        </div>
+
+        {/* Primary Call-to-Action: View Public Schedule */}
+        <div className="space-y-3 pt-1">
+          <button
+            type="button"
+            onClick={() => navigate('/schedule')}
+            className="w-full flex items-center justify-center gap-2.5 py-4 px-6 rounded-2xl font-sans font-bold text-white text-sm sm:text-base tracking-tight transition-all duration-200 active:scale-[0.98] shadow-2xl cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, #4c6ef5 0%, #5c7cfa 50%, #748ffc 100%)',
+              boxShadow: '0 0 32px rgba(92,124,250,0.4), 0 4px 16px rgba(92,124,250,0.3)',
+            }}>
+            <Clock className="w-5 h-5" />
+            <span>{t.btnViewSchedule}</span>
+            <ArrowRight className="w-5 h-5 ml-1" />
+          </button>
+
+          {/* Secondary Links: Admin Portal & R4 Override */}
+          <div className="flex items-center justify-center gap-3 text-xs font-sans text-slate-400 pt-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => navigate('/admin')}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-300 transition-colors font-medium">
+              <Crown className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{t.btnAdminLogin}</span>
+            </button>
+
+            <span className="text-slate-700">·</span>
+
+            <button
+              type="button"
+              onClick={onUnlockRequest}
+              className="text-slate-500 hover:text-slate-300 transition-colors underline decoration-dotted text-[11px]">
+              R4 Form Override
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
+  const navigate = useNavigate()
   const [lang, setLang]     = useState('en')
   const [form, setForm]     = useState(INITIAL_FORM)
   const [errors, setErrors] = useState({})
   const [submitting, setSub] = useState(false)
   const [toast, setToast]   = useState(null)
   const [successData, setOk] = useState(null)
+
+  // R4 Leadership Override state
+  const [adminUnlocked, setAdminUnlocked]     = useState(false)
+  const [showUnlockModal, setShowUnlockModal] = useState(false)
+  const [unlockPasscode, setUnlockPasscode]   = useState('')
+  const [unlockError, setUnlockError]         = useState('')
+
+  const handleUnlockSubmit = (e) => {
+    e.preventDefault()
+    const valid = import.meta.env.VITE_ADMIN_PASSWORD || 'admin2323'
+    if (unlockPasscode.trim() === valid) {
+      setAdminUnlocked(true)
+      setShowUnlockModal(false)
+      setUnlockPasscode('')
+      setUnlockError('')
+      showToast('success', 'Form Unlocked', 'R4 Leadership Override enabled.')
+    } else {
+      setUnlockError('Incorrect leadership passcode.')
+    }
+  }
 
   const t     = T[lang]
   const isRTL = lang === 'ar'
@@ -866,6 +1067,10 @@ export default function App() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!adminUnlocked) {
+      showToast('error', 'Booking Closed', 'Public submissions are closed. Contact alliance leadership.')
+      return
+    }
     const errs = validate()
     if (Object.keys(errs).length) {
       setErrors(errs)
@@ -981,134 +1186,214 @@ export default function App() {
           </div>
         </div>
 
-        {/* Card */}
-        <div className="w-full overflow-hidden"
-          style={{ maxWidth: 650, background: '#0f1117', borderRadius: 22,
-                   animation: 'slideUp 0.4s ease-out, cardGlow 5s ease-in-out infinite' }}>
-          <div className="h-0.5 w-full"
-            style={{ background: 'linear-gradient(90deg,#4c6ef5 0%,#748ffc 60%,transparent 100%)' }} />
-
-          {/* Card header */}
-          <div className="flex items-center justify-between px-5 py-3"
-            style={{ borderBottom: '1px solid #1c1f2e', background: 'rgba(18,20,28,0.5)' }}>
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4" style={{ color: '#4c6ef5' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280',
-                             textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                Ministry Booking
-              </span>
+        {!adminUnlocked ? (
+          <BookingClosedCard
+            t={t}
+            isRTL={isRTL}
+            lang={lang}
+            setLang={setLang}
+            onUnlockRequest={() => setShowUnlockModal(true)}
+          />
+        ) : (
+          <div className="w-full space-y-4" style={{ maxWidth: 650 }}>
+            {/* R4 Override Banner */}
+            <div className="flex items-center justify-between px-4 py-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-xs">
+              <div className="flex items-center gap-2">
+                <Unlock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span><strong>R4 Leadership Override Active:</strong> Form unlocked for manual entry.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAdminUnlocked(false)}
+                className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-semibold border border-amber-500/30 transition-colors">
+                Lock Form
+              </button>
             </div>
-            <LangSwitcher lang={lang} setLang={setLang} />
-          </div>
 
-          <form onSubmit={handleSubmit} noValidate className="p-5 sm:p-6 space-y-5">
+            {/* Card */}
+            <div className="w-full overflow-hidden"
+              style={{ maxWidth: 650, background: '#0f1117', borderRadius: 22,
+                       animation: 'slideUp 0.4s ease-out, cardGlow 5s ease-in-out infinite' }}>
+              <div className="h-0.5 w-full"
+                style={{ background: 'linear-gradient(90deg,#4c6ef5 0%,#748ffc 60%,transparent 100%)' }} />
 
-            {/* 1 ── Player Details */}
-            <div className="space-y-4">
-              <Divider label={t.secPlayer} />
-              <Field label={t.labelName} icon={<User className="w-3.5 h-3.5" />}
-                error={errors.playerName} isRTL={isRTL}>
-                <input type="text" value={form.playerName} onChange={setField('playerName')}
-                  placeholder={t.placeholderName} dir={isRTL ? 'rtl' : 'ltr'}
-                  className="w-full rounded-xl px-4 py-3.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 transition-all"
-                  style={inputStyle(errors.playerName)} />
-              </Field>
-              <Field label={t.labelAlliance} icon={<Shield className="w-3.5 h-3.5" />}
-                error={errors.alliance} isRTL={isRTL}>
-                <div className="grid grid-cols-4 gap-2.5">
-                  {ALLIANCES.map((a) => {
-                    const s   = ALLIANCE_STYLES[a]
-                    const sel = form.alliance === a
-                    return (
-                      <button key={a} type="button" onClick={() => set('alliance')(a)}
-                        className="py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-200 active:scale-95"
-                        style={sel
-                          ? { border: `1.5px solid ${s.border}`, background: s.bg, color: s.text, boxShadow: s.glow }
-                          : { border: '1.5px solid #1c1f2e', background: '#0a0b0f', color: '#4b5563' }}>
-                        {a}
-                      </button>
-                    )
-                  })}
+              {/* Card header */}
+              <div className="flex items-center justify-between px-5 py-3"
+                style={{ borderBottom: '1px solid #1c1f2e', background: 'rgba(18,20,28,0.5)' }}>
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4" style={{ color: '#4c6ef5' }} />
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#6b7280',
+                                 textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    Ministry Booking
+                  </span>
                 </div>
-              </Field>
+                <LangSwitcher lang={lang} setLang={setLang} />
+              </div>
+
+              <form onSubmit={handleSubmit} noValidate className="p-5 sm:p-6 space-y-5">
+
+                {/* 1 ── Player Details */}
+                <div className="space-y-4">
+                  <Divider label={t.secPlayer} />
+                  <Field label={t.labelName} icon={<User className="w-3.5 h-3.5" />}
+                    error={errors.playerName} isRTL={isRTL}>
+                    <input type="text" value={form.playerName} onChange={setField('playerName')}
+                      placeholder={t.placeholderName} dir={isRTL ? 'rtl' : 'ltr'}
+                      className="w-full rounded-xl px-4 py-3.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 transition-all"
+                      style={inputStyle(errors.playerName)} />
+                  </Field>
+                  <Field label={t.labelAlliance} icon={<Shield className="w-3.5 h-3.5" />}
+                    error={errors.alliance} isRTL={isRTL}>
+                    <div className="grid grid-cols-4 gap-2.5">
+                      {ALLIANCES.map((a) => {
+                        const s   = ALLIANCE_STYLES[a]
+                        const sel = form.alliance === a
+                        return (
+                          <button key={a} type="button" onClick={() => set('alliance')(a)}
+                            className="py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all duration-200 active:scale-95"
+                            style={sel
+                              ? { border: `1.5px solid ${s.border}`, background: s.bg, color: s.text, boxShadow: s.glow }
+                              : { border: '1.5px solid #1c1f2e', background: '#0a0b0f', color: '#4b5563' }}>
+                            {a}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </Field>
+                </div>
+
+                {/* 2 ── KvK Prep Day (multi-select) */}
+                <div className="space-y-3">
+                  <Divider label={t.secDay} />
+                  <KvkDaySelector
+                    value={form.kvkDays}
+                    onChange={set('kvkDays')}
+                    error={errors.kvkDays}
+                    t={t}
+                  />
+                </div>
+
+                {/* 3 ── Town Center Level */}
+                <div className="space-y-3">
+                  <Divider label={t.secTc} />
+                  <TcLevelSelector
+                    value={form.tcLevel}
+                    onChange={set('tcLevel')}
+                    error={errors.tcLevel}
+                    t={t}
+                  />
+                </div>
+
+                {/* 4 ── Speedups & Resources */}
+                <div className="space-y-4">
+                  <Divider label={t.secSpeedups} />
+                  <SpeedupRow icon={<Hammer className="w-3.5 h-3.5" />} label={t.labelConstruction}
+                    days={form.constructionDays} hours={form.constructionHours}
+                    onDays={set('constructionDays')} onHours={set('constructionHours')}
+                    t={t} isRTL={isRTL} />
+                  <SpeedupRow icon={<FlaskConical className="w-3.5 h-3.5" />} label={t.labelResearch}
+                    days={form.researchDays} hours={form.researchHours}
+                    onDays={set('researchDays')} onHours={set('researchHours')}
+                    t={t} isRTL={isRTL} />
+                  <SpeedupRow icon={<Sword className="w-3.5 h-3.5" />} label={t.labelTraining}
+                    days={form.trainingDays} hours={form.trainingHours}
+                    onDays={set('trainingDays')} onHours={set('trainingHours')}
+                    t={t} isRTL={isRTL} />
+                  <Field label={t.labelGold} icon={<Coins className="w-3.5 h-3.5" />} isRTL={isRTL}>
+                    <input type="number" inputMode="numeric" min="0" value={form.trueGold}
+                      onChange={setField('trueGold')} placeholder={t.placeholderGold} dir="ltr"
+                      className="w-full rounded-xl px-4 py-3.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      style={{ ...inputStyle(false), textAlign: isRTL ? 'right' : 'left' }} />
+                  </Field>
+                </div>
+
+                {/* 5 ── Time Slot (dynamic per day) */}
+                <div className="space-y-3">
+                  <Divider label={t.secSlot} />
+                  <TimeSlotSection
+                    kvkDays={form.kvkDays}
+                    timeSlotDay1={form.timeSlotDay1}
+                    timeSlotDay4={form.timeSlotDay4}
+                    onDay1={set('timeSlotDay1')}
+                    onDay4={set('timeSlotDay4')}
+                    errors={errors}
+                    t={t}
+                    isRTL={isRTL}
+                  />
+                </div>
+
+                {/* Submit */}
+                <button type="submit" disabled={submitting}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-2xl font-bold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
+                  style={{ padding: '16px 24px', fontSize: 15,
+                           background: submitting ? '#1c1f2e' : 'linear-gradient(135deg,#4c6ef5 0%,#5c7cfa 60%,#748ffc 100%)',
+                           boxShadow: submitting ? 'none' : '0 0 36px rgba(92,124,250,0.4),0 4px 20px rgba(92,124,250,0.25)' }}>
+                  {submitting
+                    ? <><Loader2 className="w-5 h-5 animate-spin" />{t.btnSubmitting}</>
+                    : <><Send    className="w-5 h-5" />{t.btnSubmit}</>}
+                </button>
+
+              </form>
             </div>
-
-            {/* 2 ── KvK Prep Day (multi-select) */}
-            <div className="space-y-3">
-              <Divider label={t.secDay} />
-              <KvkDaySelector
-                value={form.kvkDays}
-                onChange={set('kvkDays')}
-                error={errors.kvkDays}
-                t={t}
-              />
-            </div>
-
-            {/* 3 ── Town Center Level */}
-            <div className="space-y-3">
-              <Divider label={t.secTc} />
-              <TcLevelSelector
-                value={form.tcLevel}
-                onChange={set('tcLevel')}
-                error={errors.tcLevel}
-                t={t}
-              />
-            </div>
-
-            {/* 4 ── Speedups & Resources */}
-            <div className="space-y-4">
-              <Divider label={t.secSpeedups} />
-              <SpeedupRow icon={<Hammer className="w-3.5 h-3.5" />} label={t.labelConstruction}
-                days={form.constructionDays} hours={form.constructionHours}
-                onDays={set('constructionDays')} onHours={set('constructionHours')}
-                t={t} isRTL={isRTL} />
-              <SpeedupRow icon={<FlaskConical className="w-3.5 h-3.5" />} label={t.labelResearch}
-                days={form.researchDays} hours={form.researchHours}
-                onDays={set('researchDays')} onHours={set('researchHours')}
-                t={t} isRTL={isRTL} />
-              <SpeedupRow icon={<Sword className="w-3.5 h-3.5" />} label={t.labelTraining}
-                days={form.trainingDays} hours={form.trainingHours}
-                onDays={set('trainingDays')} onHours={set('trainingHours')}
-                t={t} isRTL={isRTL} />
-              <Field label={t.labelGold} icon={<Coins className="w-3.5 h-3.5" />} isRTL={isRTL}>
-                <input type="number" inputMode="numeric" min="0" value={form.trueGold}
-                  onChange={setField('trueGold')} placeholder={t.placeholderGold} dir="ltr"
-                  className="w-full rounded-xl px-4 py-3.5 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 transition-all [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  style={{ ...inputStyle(false), textAlign: isRTL ? 'right' : 'left' }} />
-              </Field>
-            </div>
-
-            {/* 5 ── Time Slot (dynamic per day) */}
-            <div className="space-y-3">
-              <Divider label={t.secSlot} />
-              <TimeSlotSection
-                kvkDays={form.kvkDays}
-                timeSlotDay1={form.timeSlotDay1}
-                timeSlotDay4={form.timeSlotDay4}
-                onDay1={set('timeSlotDay1')}
-                onDay4={set('timeSlotDay4')}
-                errors={errors}
-                t={t}
-                isRTL={isRTL}
-              />
-            </div>
-
-            {/* Submit */}
-            <button type="submit" disabled={submitting}
-              className="w-full flex items-center justify-center gap-2.5 rounded-2xl font-bold text-white transition-all duration-200 active:scale-[0.98] disabled:opacity-55 disabled:cursor-not-allowed"
-              style={{ padding: '16px 24px', fontSize: 15,
-                       background: submitting ? '#1c1f2e' : 'linear-gradient(135deg,#4c6ef5 0%,#5c7cfa 60%,#748ffc 100%)',
-                       boxShadow: submitting ? 'none' : '0 0 36px rgba(92,124,250,0.4),0 4px 20px rgba(92,124,250,0.25)' }}>
-              {submitting
-                ? <><Loader2 className="w-5 h-5 animate-spin" />{t.btnSubmitting}</>
-                : <><Send    className="w-5 h-5" />{t.btnSubmit}</>}
-            </button>
-
-          </form>
-        </div>
+          </div>
+        )}
 
         <p className="mt-6 text-center" style={{ fontSize: 11, color: '#374151' }}>{t.footer}</p>
       </div>
+
+      {/* R4 Leadership Passcode Unlock Modal */}
+      {showUnlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-sm rounded-2xl p-6 bg-[#0f1117] border border-amber-500/30 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5 text-amber-400" />
+                <h3 className="font-sans font-bold text-white text-base">R4 Leadership Unlock</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowUnlockModal(false); setUnlockError(''); setUnlockPasscode('') }}
+                className="text-slate-500 hover:text-white transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="font-sans text-xs text-slate-400 leading-relaxed">
+              Enter the alliance leadership passcode to unlock the booking form for manual submissions.
+            </p>
+
+            <form onSubmit={handleUnlockSubmit} className="space-y-3">
+              <div>
+                <input
+                  type="password"
+                  autoFocus
+                  value={unlockPasscode}
+                  onChange={(e) => { setUnlockPasscode(e.target.value); setUnlockError('') }}
+                  placeholder="Enter passcode…"
+                  className="w-full rounded-xl px-4 py-3 text-sm text-gray-100 placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-all font-mono"
+                  style={{ background: '#0a0b0f', border: `1px solid ${unlockError ? '#f43f5e' : '#1c1f2e'}` }}
+                />
+                {unlockError && <p className="text-xs text-rose-400 mt-1.5">{unlockError}</p>}
+              </div>
+
+              <div className="flex gap-2 pt-1 font-sans">
+                <button
+                  type="button"
+                  onClick={() => { setShowUnlockModal(false); setUnlockError(''); setUnlockPasscode('') }}
+                  className="flex-1 py-2.5 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-[#161822] border border-[#1c1f2e] transition-colors">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl text-xs font-bold text-black flex items-center justify-center gap-1.5 bg-amber-400 hover:bg-amber-300 transition-colors shadow-lg shadow-amber-500/20 active:scale-95 cursor-pointer">
+                  <Unlock className="w-3.5 h-3.5" />
+                  <span>Unlock Form</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <SuccessModal data={successData} t={t} onClose={() => setOk(null)} />
       <Toast toast={toast} onDismiss={() => setToast(null)} />

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Clock, Crown, Search, ArrowLeft, RefreshCw,
-  Eye, EyeOff, Sparkles, Share2, Check, X, Filter,
+  Eye, EyeOff, Sparkles, Share2, Check, X, Filter, Lock,
 } from 'lucide-react'
 import { supabase } from './lib/supabase.js'
 
@@ -344,17 +344,13 @@ export default function PublicSchedule() {
             <span>Refresh</span>
           </button>
 
-          {/* Book Appointment CTA */}
-          <button
-            onClick={() => navigate('/')}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl font-sans text-xs font-bold tracking-tight text-white transition-all active:scale-95 shadow-lg"
-            style={{
-              background: 'linear-gradient(135deg, #4c6ef5, #5c7cfa)',
-              boxShadow: '0 0 20px rgba(92,124,250,0.3)',
-            }}>
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Book a Slot</span>
-          </button>
+          {/* Booking Closed Indicator */}
+          <div
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl font-sans text-xs font-semibold tracking-tight text-rose-300 bg-rose-500/10 border border-rose-500/25"
+            title="Ministry booking submissions are currently closed">
+            <Lock className="w-3.5 h-3.5 text-rose-400" />
+            <span>Booking Closed</span>
+          </div>
         </div>
       </header>
 
@@ -733,32 +729,27 @@ export default function PublicSchedule() {
       {/* ── Open Slot Click Prompt Modal ── */}
       {unclaimedPromptSlot && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-sm rounded-2xl p-6 bg-[#0f1117] border border-indigo-500/30 shadow-2xl space-y-4">
+          <div className="w-full max-w-sm rounded-2xl p-6 bg-[#0f1117] border border-rose-500/30 shadow-2xl space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                <Sparkles className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-rose-500/15 border border-rose-500/30 flex items-center justify-center text-rose-400">
+                <Lock className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-sans font-bold text-white text-base">Open Slot Available!</h3>
+                <h3 className="font-sans font-bold text-white text-base">Unclaimed Slot</h3>
                 <p className="font-sans text-xs text-slate-400">{unclaimedPromptSlot.label}</p>
               </div>
             </div>
 
             <p className="font-sans text-xs text-slate-300 leading-relaxed">
-              This 30-minute Ministry Appointment slot on <strong className="text-white">{activeDay === 'day1' ? 'Day 1' : 'Day 4'}</strong> is currently available with 0 signups. Would you like to book it?
+              This 30-minute slot on <strong className="text-white">{activeDay === 'day1' ? 'Day 1' : 'Day 4'}</strong> currently has 0 assigned players.
+              Public bookings are now closed. If your alliance needs this slot, please contact your alliance leadership (R4 / R5) to be manually assigned.
             </p>
 
-            <div className="flex gap-2 pt-2">
+            <div className="pt-2">
               <button
                 onClick={() => setPromptSlot(null)}
-                className="flex-1 py-2.5 rounded-xl font-sans text-xs font-semibold bg-[#1c1f2e] text-slate-400 hover:text-white">
+                className="w-full py-2.5 rounded-xl font-sans text-xs font-semibold bg-[#1c1f2e] text-slate-300 hover:text-white transition-colors cursor-pointer">
                 Close
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl font-sans text-xs font-bold text-white shadow-lg bg-gradient-to-r from-indigo-500 to-indigo-600 active:scale-95">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Book This Slot</span>
               </button>
             </div>
           </div>

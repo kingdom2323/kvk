@@ -1088,10 +1088,10 @@ function LoginModal({ onSuccess }) {
             style={{ background:'linear-gradient(135deg,#4c6ef5,#5c7cfa)', boxShadow:'0 0 24px rgba(92,124,250,0.35)', fontSize:14 }}>
             <KeyRound className="w-4 h-4" />Enter Admin Dashboard
           </button>
-          <button type="button" onClick={() => navigate('/')}
+          <button type="button" onClick={() => navigate('/schedule')}
             className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl font-sans text-sm transition-all text-slate-500 hover:text-slate-300"
             style={{ background:'transparent', border:'1px solid #1c1f2e' }}>
-            <ArrowLeft className="w-3.5 h-3.5" />Back to Booking Form
+            <ArrowLeft className="w-3.5 h-3.5" />Back to Public Schedule
           </button>
         </form>
         <p className="text-center mt-4 font-sans" style={{ fontSize:10, color:'#2d3748' }}>
@@ -1820,9 +1820,10 @@ export default function Admin() {
           style={{ background:'rgba(10,11,15,0.93)', borderBottom:'1px solid #1c1f2e' }}>
 
           <div className="flex items-center justify-between w-full sm:w-auto gap-2">
-            <button onClick={() => navigate('/')}
-              className="flex items-center gap-1.5 text-xs sm:text-sm font-sans font-medium transition-colors shrink-0 text-slate-400 hover:text-white">
-              <ArrowLeft className="w-4 h-4" /><span>Booking</span>
+            <button onClick={() => navigate('/schedule')}
+              className="flex items-center gap-1.5 text-xs sm:text-sm font-sans font-medium transition-colors shrink-0 text-slate-400 hover:text-white"
+              title="View Public Schedule">
+              <ArrowLeft className="w-4 h-4" /><span>Schedule</span>
             </button>
 
             <div className="flex items-center gap-2">
